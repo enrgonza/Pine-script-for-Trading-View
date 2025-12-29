@@ -1,0 +1,70 @@
+// # **************************************************************************** #
+// #                                                                              #
+// #                                                         :::      ::::::::    #
+// #    RSI Estocástico 1.2                                :+:      :+:    :+:    #
+// #                                                     +:+ +:+         +:+      #
+// #    By: enrgonza                                   +#+  +:+       +#+         #
+// #                                                 +#+#+#+#+#+   +#+            #
+// #    Created: 2025/10/30          by kike              #+#    #+#              #
+// #    Updated: 2025/10/30          by kike             ###   ########.fr        #
+// #                                                                              #
+// # **************************************************************************** #
+
+//--------------------------------------------------
+// RSI Estocástico 1.2 (mejorado)
+//--------------------------------------------------
+
+//@version=6
+indicator("RSI Estocástico 1.2", overlay=false)
+
+// Parámetros
+rsi_length   = input.int(14, "Longitud RSI", minval=1)
+stoch_length = input.int(14, "Longitud Estocástico", minval=1)
+smooth_k     = input.int(3, "Suavizado %K", minval=1)
+smooth_d     = input.int(3, "Suavizado %D", minval=1)
+src          = input.source(close, "Fuente de datos")
+
+//--------------------------------------------------
+// Cálculo principal
+//--------------------------------------------------
+rsi = ta.rsi(src, rsi_length)
+rsi_min = ta.lowest(rsi, stoch_length)
+rsi_max = ta.highest(rsi, stoch_length)
+
+// Protección ante división por cero
+stoch_rsi = (rsi_max != rsi_min) ? (rsi - rsi_min) / (rsi_max - rsi_min) : 0
+
+k = ta.sma(stoch_rsi, smooth_k) * 100
+d = ta.sma(k, smooth_d)
+
+//--------------------------------------------------
+// Gráfica de líneas
+//--------------------------------------------------
+plot_k = plot(k, title="%K", color=color.new(color.teal, 0), linewidth=2)
+plot_d = plot(d, title="%D", color=color.new(#ff1900, 66), linewidth=2)
+
+// Relleno entre %K y %D con sombra
+colorRelleno = k > d ? color.new(color.green, 65) : color.new(color.red, 65)
+fill(plot_k, plot_d, color=colorRelleno)
+
+//--------------------------------------------------
+// Líneas de referencia
+//--------------------------------------------------
+hline(80, "Sobrecompra", color=color.new(color.red, 70))
+hline(20, "Sobreventa", color=color.new(color.green, 70))
+
+//--------------------------------------------------
+// Señales visuales (puntos)
+//--------------------------------------------------
+crossUp   = ta.crossover(k, d)    // %K cruza hacia arriba %D
+crossDown = ta.crossunder(k, d)   // %K cruza hacia abajo %D
+
+// Punto blanco abajo (zona sobreventa)
+plotshape(crossUp and k < 24,  title="Señal de compra", 
+     location=location.bottom, color=color.new(color.white, 0),
+     style=shape.circle, size=size.tiny)
+
+// Punto azul arriba (zona sobrecompra)
+plotshape(crossDown and k > 82, title="Señal de venta", 
+     location=location.top, color=color.new(color.blue, 0),
+     style=shape.circle, size=size.tiny)
